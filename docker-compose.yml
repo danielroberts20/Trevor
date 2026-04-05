@@ -1,0 +1,23 @@
+services:
+  trevor:
+    build: .
+    container_name: trevor
+    env_file: .env
+    volumes:
+      - ./app:/app                                           # bind-mount for dev (hot reload)
+      - /mnt/linux/docker/services/travelnet/data:/data:ro  # shared read-only access to travel.db
+      - trevor-chroma:/chroma                               # persistent vector store
+    ports:
+      - "8300:8300"
+    restart: unless-stopped
+    networks:
+      - travelnet
+
+volumes:
+  trevor-chroma:
+    name: trevor-chroma
+
+networks:
+  travelnet:
+    external: true      # defined by TravelNet's compose; Trevor just joins it
+    name: travelnet
