@@ -31,6 +31,19 @@ class Settings(BaseSettings):
     # Ingestion filter
     travel_start_date: str = Field(alias="TRAVEL_START_DATE")
 
+    # TravelNet API (same Docker network — use service name, not Tailscale hostname)
+    travelnet_url: str = Field(alias="TRAVELNET_URL")
+    travelnet_api_key: str = Field(alias="TRAVELNET_API_KEY")
+ 
+    # Compute node SSH (used by Trevor for polling PC state only)
+    compute_host: str = Field(alias="COMPUTE_HOST")
+    compute_port: int = Field(alias="COMPUTE_PORT")
+    compute_username: str = Field(alias="COMPUTE_USERNAME")
+    compute_password: str = Field(alias="COMPUTE_PASSWORD")
+ 
+    # Seconds of chat inactivity before the PC is automatically shut down
+    compute_inactivity_timeout: int = Field(alias="COMPUTE_INACTIVITY_TIMEOUT")
+
     # API security
     trevor_api_key: str = Field(alias="TREVOR_API_KEY")
 
