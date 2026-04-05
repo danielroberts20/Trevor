@@ -7,10 +7,11 @@ import sqlite3
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI #type: ignore
+from fastapi.middleware.cors import CORSMiddleware #type: ignore
 
 from api.chat import router as chat_router
+from compute.manager import start_background_tasks
 from config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -33,7 +34,7 @@ def _check_db() -> dict:
 def _check_chroma() -> dict:
     """Verify Chroma is reachable and the client can be instantiated."""
     try:
-        import chromadb
+        import chromadb #type: ignore
         client = chromadb.PersistentClient(path=settings.chroma_path)
         collections = client.list_collections()
         return {"status": "ok", "collections": len(collections)}
@@ -43,7 +44,7 @@ def _check_chroma() -> dict:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Run startup checks; log results but don't block startup on warnings."""
+    """Run startup checks and start background tasks."""
     logger.info("Trevor starting up...")
     logger.info(f"LLM provider: {settings.llm_provider}")
     logger.info(f"DB path: {settings.db_path}")
@@ -59,6 +60,9 @@ async def lifespan(app: FastAPI):
         "db": db_status,
         "chroma": chroma_status,
     }
+
+    # Start compute inactivity watcher (polling starts only after a wake call)
+    start_background_tasks()
 
     yield
 
