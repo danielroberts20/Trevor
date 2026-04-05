@@ -13,4 +13,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 # App code is bind-mounted in development; copied in production
 COPY app/ .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8300", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8300"]
