@@ -9,10 +9,6 @@ The PC-side wrapper currently accepts a single "message" string, so the
 full message list (system + history + user) is concatenated into one
 prompt. This is sufficient for end-to-end testing.
 
-TODO: Update the PC-side Ollama wrapper to accept OpenAI-format messages
-so that system prompt and history are passed correctly as distinct roles.
-This matters for multi-turn coherence and tool-calling support.
-
 TODO (frontend / SSE): Replace the ComputeWarmingUp 503 response with an
 SSE stream. See app/api/chat.py.
 
@@ -45,38 +41,15 @@ class OllamaProvider(BaseLLMProvider):
                 "Please try again in a moment."
             )
 
-    def _flatten_messages(self, messages: list[dict]) -> str:
-        """
-        Concatenate OpenAI-format messages into a single prompt string.
-        Used because the PC-side wrapper accepts only a plain string.
-
-        Format:
-          System: <system prompt>
-          User: <message>
-          Assistant: <message>
-          User: <current message>
-        """
-        role_labels = {"system": "System", "user": "User", "assistant": "Assistant"}
-        parts = []
-        for m in messages:
-            label = role_labels.get(m["role"], m["role"].capitalize())
-            parts.append(f"{label}: {m['content']}")
-        return "\n\n".join(parts)
-
-    async def chat(
-        self,
-        messages: list[dict],
-        tools: list[dict] | None = None,
-        temperature: float = 0.7,
-    ) -> dict:
+    async def chat(self, 
+                   messages: list[dict], 
+                   tools=None, 
+                   temperature=0.7) -> dict:
         self._ensure_pc_online()
-
-        prompt = self._flatten_messages(messages)
-
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
             r = await client.post(
                 f"{settings.ollama_base_url}/chat",
-                json={"message": prompt, "model": settings.ollama_model},
+                json={"messages": messages, "model": settings.ollama_model},
             )
             r.raise_for_status()
             return {"content": r.json()["response"], "tool_calls": []}
