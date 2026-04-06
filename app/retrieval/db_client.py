@@ -18,9 +18,9 @@ from config import settings
 
 
 def _get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(settings.db_path, check_same_thread=False)
+    # Open read-only using SQLite URI — no WAL sidecar files needed
+    conn = sqlite3.connect(f"file:{settings.db_path}?mode=ro&immutable=1", uri=True)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
 
