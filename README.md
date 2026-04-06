@@ -215,9 +215,9 @@ This pattern — ML detection piped into LLM interpretation — mirrors a common
 | Component | Choice | Rationale |
 |---|---|---|
 | Backend | FastAPI | Consistent with TravelNet stack; async-native |
-| LLM (dev) | Ollama / phi3:mini | Free, local, no API cost during development |
+| LLM (dev) | Ollama / llama3.1:8b-instruct-q8_0 | Free, local, no API cost during development |
 | LLM (prod) | OpenAI / Anthropic | Configurable via env var — swap without code changes |
-| Embedding model | nomic-embed-text (Ollama) | Local; note: Anthropic has no embedding API |
+| Embedding model | mxbai-embed-large (Ollama) | Local; note: Anthropic has no embedding API |
 | Vector store | Chroma | Zero idle cost vs Pinecone; appropriate for intermittent portfolio use |
 | Database | SQLite (TravelNet's travel.db) | Read-only access; WAL mode enabled for concurrent reads |
 | Container runtime | Docker + Docker Compose | Consistent with TravelNet deployment |
@@ -230,7 +230,7 @@ Trevor runs as a Docker container on a Raspberry Pi alongside TravelNet, joined 
 
 ```
 Raspberry Pi (always-on)
-├── TravelNet containers  (travelnet Docker network)
+├── TravelNet container   (travelnet Docker network)
 └── Trevor container      (joins travelnet network; port 8300)
       │
       ├── reads /data/travel.db  (shared read-only volume)
@@ -321,21 +321,19 @@ Ingestion is idempotent — re-running on the same export skips existing entries
 |---|---|---|
 | `LLM_PROVIDER` | `ollama` | `ollama` \| `openai` \| `anthropic` |
 | `OLLAMA_BASE_URL` | — | URL of the Ollama FastAPI wrapper |
-| `OLLAMA_MODEL` | `phi3:mini` | Chat model |
-| `OLLAMA_EMBED_MODEL` | `nomic-embed-text` | Embedding model |
+| `OLLAMA_MODEL` | `llama3.1:8b-instruct-q8_0` | Chat model |
+| `OLLAMA_EMBED_MODEL` | `mxbai-embed-large` | Embedding model |
 | `OPENAI_API_KEY` | — | Required if provider is `openai` |
 | `ANTHROPIC_API_KEY` | — | Required if provider is `anthropic` |
 | `DB_PATH` | `/data/travel.db` | Path to TravelNet SQLite database (inside container) |
 | `CHROMA_PATH` | `/chroma` | Path to Chroma persistent storage (inside container) |
-| `TRAVEL_START_DATE` | `2025-06-01` | Entries before this date are excluded from ingestion |
+| `TRAVEL_START_DATE` | `YYYY-MM-DD` | Entries before this date are excluded from ingestion |
 | `TREVOR_API_KEY` | `changeme` | Bearer token for `/chat` and `/explain` endpoints |
 | `ANONYMIZED_TELEMETRY` | — | Set to `False` to silence Chroma telemetry logs |
 
 ---
 
 ## Design Decisions
-
-A full log of architectural decisions and their rationale is maintained in [`CLAUDE.md`](./CLAUDE.md). Key decisions:
 
 - **Tool-calling over hardcoded routing** — the LLM decides which data source to query, handling cross-stream queries naturally without a classifier-based router
 - **Chroma over Pinecone** — zero idle cost; appropriate for a portfolio project with intermittent use
