@@ -20,68 +20,37 @@ from llm.ollama import ComputeWarmingUp
 from llm.provider import get_provider
 from fastapi import APIRouter, HTTPException, Header, Request #type: ignore
 from pydantic import BaseModel #type: ignore
+from datetime import date
 
 from config import settings
 from compute.manager import record_chat
+from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
+from tools.query_db import TOOL_DEFINITION as QUERY_DB_TOOL
+from prompt import SYSTEM_PROMPT_BASE, SCHEMA_BLOCK_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-SYSTEM_PROMPT_BASE = """You are Trevor, a conversational AI assistant with access to Dan's \
-personal travel data collected over a multi-year trip across approximately nine countries. \
-Your data sources include GPS and location history, health metrics, financial records, \
-and personal journal entries.
- 
-Answer questions honestly and concisely, grounded in the data available to you. \
-If you don't know something or the data doesn't cover it, say so clearly.
-
-You have access to two tools:
-
-search_journal(query: str, n_results: int)
-  Search Dan's travel journal entries semantically. Use this for questions about
-  experiences, feelings, events, reflections, or anything narrative in nature.
-  Examples: "how did I feel in Vietnam", "what happened in my first week in Japan"
-
-query_db(sql: str)
-  Execute a SELECT query against the TravelNet database. Use this for precise
-  structured questions about location history, health metrics, spending, and
-  ML model outputs (HMM segments, DBSCAN clusters, anomaly flags).
-  Only SELECT statements are permitted.
-  Examples: "what was my average daily spend in Thailand", "how many steps on 14 March"
- 
-{schema_block}
-
-Rules:
-- Always use a tool if the question requires data. Never guess or fabricate data.
-- Use search_journal for narrative questions, query_db for structured ones.
-- For cross-stream questions (e.g. "did my mood correlate with spending?"), use both.
-- Cite sources using <CITE:chunk_id> for journal entries.
-- Tag speculative content with <SPEC>...</SPEC>."""
- 
-SCHEMA_BLOCK_TEMPLATE = """You have access to the TravelNet database. \
-Only SELECT queries are permitted. The schema is as follows:
- 
-{schema}"""
-
-from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
-from tools.query_db import TOOL_DEFINITION as QUERY_DB_TOOL
 
 TOOLS = [SEARCH_JOURNAL_TOOL, QUERY_DB_TOOL]
- 
- 
+
+
 def _build_system_prompt(db_schema: str) -> str:
     """
     Build the system prompt, injecting the DB schema if available.
     If the schema failed to load at startup, the schema block is omitted
     and the LLM will indicate it cannot query structured data.
     """
+    today = date.today().isoformat()
+    date_line = f"Today's date: {today}.\n"
+
     if db_schema:
         schema_block = SCHEMA_BLOCK_TEMPLATE.format(schema=db_schema)
     else:
         schema_block = "(Database schema unavailable — structured queries are disabled.)"
- 
-    return SYSTEM_PROMPT_BASE.format(schema_block=schema_block)
+
+    return SYSTEM_PROMPT_BASE.format(date_line=date_line, schema_block=schema_block)
 
 
 class Message(BaseModel):
