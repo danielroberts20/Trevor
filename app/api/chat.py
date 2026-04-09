@@ -14,6 +14,8 @@ emit status events while polling compute.manager.is_pc_active(), then
 stream the LLM response once online. See app/llm/ollama.py for the TODO.
 """
 
+import logging
+
 from llm.ollama import ComputeWarmingUp
 from llm.provider import get_provider
 from fastapi import APIRouter, HTTPException, Header, Request #type: ignore
@@ -21,6 +23,8 @@ from pydantic import BaseModel #type: ignore
 
 from config import settings
 from compute.manager import record_chat
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -124,6 +128,7 @@ async def chat(
         messages = _build_messages(request, db_schema)
         provider = get_provider()
         result = await provider.chat(messages, tools=TOOLS, temperature=request.reasoning_freedom / 10)
+        logger.info("LLM raw response: %s", result)
         response_text = result["content"]
  
         record_chat()
@@ -132,7 +137,7 @@ async def chat(
             Message(role="user", content=request.message),
             Message(role="assistant", content=response_text),
         ]
- 
+        
         return ChatResponse(response=response_text, history=updated_history)
  
     except ComputeWarmingUp as e:
