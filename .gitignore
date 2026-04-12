@@ -39,3 +39,6 @@ chroma/
 CLAUDE.md
 build.sh
 app/prompt.py
+
+# Journal Exports
+AppleJournalEntries/
