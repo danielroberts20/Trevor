@@ -23,29 +23,10 @@ import argparse
 import logging
 from pathlib import Path
 
+from ingestion.journal.parse import JournalEntry, parse_entry
 from config import settings
 
 logger = logging.getLogger(__name__)
-
-
-def parse_entry(html_path: Path) -> dict | None:
-    """
-    Parse a single Apple Journal HTML export file.
-
-    Returns a dict with:
-        id: str           — filename stem (deduplication key)
-        text: str         — plain text content of the entry
-        date: str         — ISO date string
-        location: str     — place name from sidecar JSON, if available
-        lat: float | None
-        lon: float | None
-        mood: str | None  — requires Health Auto Export for valence data
-        mood_score: float | None
-
-    Returns None if the entry should be excluded (pre-travel, or filtered).
-    """
-    # TODO: implement HTML parsing + sidecar JSON loading
-    raise NotImplementedError
 
 
 def ingest(input_dir: Path) -> None:
@@ -60,11 +41,16 @@ def ingest(input_dir: Path) -> None:
     collection = get_collection()
     existing_ids = set(collection.get()["ids"])
 
-    html_files = sorted(input_dir.glob("*.html"))
-    logger.info(f"Found {len(html_files)} HTML files in {input_dir}")
+    entries_dir = input_dir / "Entries"
+    resources_dir = input_dir / "Resources"
 
-    added, skipped, excluded = 0, 0, 0
+    html_files = sorted(entries_dir.glob("*.html"))
+    if not html_files:
+        raise FileNotFoundError(f"No .html files found in {entries_dir}")
 
+    new_entries: list[JournalEntry] = []
+
+    # Find new entries to add, and parse them into JournalEntry objects.
     for html_path in html_files:
         entry_id = html_path.stem
 
@@ -72,19 +58,26 @@ def ingest(input_dir: Path) -> None:
             skipped += 1
             continue
 
-        entry = parse_entry(html_path)
-        if entry is None:
+        try:
+            new_entries.append(parse_entry(html_path, resources_dir))
+        except ValueError as e:
+            logger.info(f"SKIP {html_path.name}: {e}")
             excluded += 1
-            continue
+        except Exception as e:
+            logger.error(f"ERROR {html_path.name}: {type(e).__name__}: {e}")
+            excluded += 1
 
-        # TODO: embed entry["text"] and upsert into collection
-        # embedding = await provider.embed(entry["text"])
+    new_entries.sort(key=lambda e: e.timestamp_utc, reverse=True)
+
+    for entry in new_entries:
+        # TODO: embed entry["journal_prose"] and upsert into collection
+        # embedding = await provider.embed(entry["journal_prose"])
         # collection.upsert(
         #     ids=[entry_id],
-        #     documents=[entry["text"]],
+        #     documents=[entry["journal_prose"]],
         #     embeddings=[embedding],
         #     metadatas=[{k: v for k, v in entry.items()
-        #                 if k not in ("id", "text") and v is not None}],
+        #                 if k not in ("id", "journal_prose") and v is not None}],
         # )
         added += 1
 
