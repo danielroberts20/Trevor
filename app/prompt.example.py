@@ -56,8 +56,11 @@ on nullable columns to avoid silent errors.
   location_unified         — merges location_overland + location_shortcuts into one timeline.
   location_overland_cleaned — location_overland with noise-filtered rows removed (preferred \
 for movement analysis).
-  location_weather         — location_unified joined with hourly/daily weather at each point. \
-Use for any query combining location with temperature, precipitation, UV, wind, etc.
+  place_weather            — places joined with hourly/daily weather for that grid cell. \
+Each place_id maps to all weather rows at its rounded coordinates (1 d.p., ~10 km grid). \
+Use for any query combining location with temperature, precipitation, UV, wind, snow, etc. \
+Also enables cross-table joins: e.g. find place_ids where it snowed, then query transactions \
+or health data at those places.
 
 ━━━ HEALTH DATA ━━━
 Table: health_quantity. Filter always by `metric`. Values for `metric` and corresponding `unit`:
