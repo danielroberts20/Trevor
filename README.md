@@ -76,6 +76,8 @@ The resource JSON sidecars contain structured data extracted per-asset:
 - **Location assets** — precise latitude/longitude, place name, place type
 - **Photo/media assets** — capture timestamp, place name
 
+Apple Journal was chosen over alternatives (Day One, Notion) specifically because its state-of-mind check-ins are stored natively in HealthKit. This makes `valence` and `valenceClassification` authoritative mood data rather than user-tagged approximations — unavailable from any other journaling app. Apple Journal's export is semi-manual (Settings → Journal → Export), so journal ingestion runs periodically rather than automatically.
+
 ### Mood Data (Apple HealthKit via Health Auto Export)
 
 Apple Journal's state-of-mind check-ins are stored in HealthKit and exported separately via [Health Auto Export](https://www.healthautoexport.com/). Each mood record contains:
@@ -190,13 +192,34 @@ The Anomaly Explainer is Trevor's most sophisticated feature — a direct integr
 
 TravelNet continuously monitors telemetry streams for anomalies: unusual spending spikes, atypical movement patterns, significant deviations from baseline health metrics. When an anomaly is detected, TravelNet calls Trevor's `/explain` endpoint with the anomaly metadata (type, timestamp, magnitude, affected data stream).
 
-Trevor then:
-1. Retrieves journal entries from the surrounding time window via semantic search
-2. Fetches the relevant telemetry context from TravelNet's database
-3. Constructs a prompt grounding the LLM in both the anomaly data and the journal narrative
-4. Returns a plain-English explanation of what likely caused the anomaly
+Trevor operates in one of two modes depending on whether journal data has been ingested for the relevant time period:
 
-This pattern — ML detection piped into LLM interpretation — mirrors a common production use case: automated monitoring systems that explain their own alerts in human language.
+**Telemetry mode** (default, always available): Trevor explains the anomaly using the surrounding structured data alone — the statistical deviation, concurrent telemetry signals (e.g. a movement spike alongside a spending spike), and any overlapping ML segment boundaries. This produces a data-grounded explanation without requiring journal coverage.
+
+**Narrative mode** (when journal data is available): Trevor additionally retrieves journal entries from the surrounding time window via semantic search, enriching the explanation with first-person narrative context. This is the more complete explanation — it can surface the actual cause (a festival, an unplanned detour, an illness) rather than describing the anomaly in statistical terms.
+
+```
+TravelNet detects anomaly
+        │
+        ▼
+POST /explain  {type, timestamp, magnitude, stream}
+        │
+        ├── Always: fetch surrounding telemetry context from DB
+        │
+        └── If journal coverage exists for timestamp:
+              semantic search over Chroma for surrounding entries
+        │
+        ▼
+Construct prompt grounding LLM in available context
+        │
+        ▼
+Return plain-English explanation
+  (labelled: telemetry-only or narrative-enriched)
+```
+
+The two-mode design reflects a deliberate architectural constraint: Apple Journal's export is semi-manual, so journal ingestion lags telemetry by days to weeks. Anomaly detection is live; narrative enrichment is retrospective. Rather than treating journal absence as a failure condition, Trevor degrades gracefully — telemetry-only explanations are genuinely useful, and the explanation is labelled so the caller knows which mode was used.
+
+This pattern — ML detection piped into LLM interpretation, with graceful degradation when context layers are unavailable — mirrors a common production use case: monitoring systems that explain their own alerts in human language, operating reliably even when supporting data is incomplete.
 
 ---
 
@@ -206,7 +229,7 @@ This pattern — ML detection piped into LLM interpretation — mirrors a common
 |---|---|---|
 | `/health` | GET | Startup check — reports DB and vector store status |
 | `/chat` | POST | Main conversational interface. Accepts message + conversation history; returns grounded response and updated history |
-| `/explain` | POST | Called by TravelNet on anomaly detection. Returns plain-English explanation with journal context |
+| `/explain` | POST | Called by TravelNet on anomaly detection. Returns plain-English explanation; telemetry-only or narrative-enriched depending on journal coverage |
 
 ---
 
@@ -342,6 +365,8 @@ Ingestion is idempotent — re-running on the same export skips existing entries
 - **Forward-only mood join window** — the Shortcut workflow guarantees mood is logged after journal creation, so the join window is `[T, T+10min]`
 - **Filename-based idempotency** — Apple Journal generates deterministic filenames from entry timestamps, making them stable across repeated exports
 - **Direct DB access** — Trevor reads `travel.db` directly (read-only volume) rather than through TravelNet's write-facing API; WAL mode for concurrent read safety
+- **Apple Journal over Day One** — chosen for native HealthKit State of Mind integration, which provides authoritative `valence` and `valenceClassification` scores unavailable from any other journaling app. The trade-off is semi-manual export (no programmatic export API exists); journal ingestion is therefore periodic rather than automated
+- **Two-mode Anomaly Explainer** — anomaly detection is live; journal narrative is retrospective due to the semi-manual upload cadence. Rather than treating journal absence as a failure condition, `/explain` degrades gracefully to telemetry-only explanation and labels the response accordingly. This mirrors a real production concern: systems that must operate reliably when supporting data layers are incomplete or lagging
 
 ---
 
