@@ -86,7 +86,18 @@ def _build_messages(request: ChatRequest, db_schema: str) -> list[dict]:
 MAX_TOOL_ITERATIONS = 5
 
 async def _run_turn(messages: list[dict], provider, temperature: float) -> str:
-    for _ in range(MAX_TOOL_ITERATIONS):
+    for i in range(MAX_TOOL_ITERATIONS):
+        is_last = i == MAX_TOOL_ITERATIONS - 1
+
+        if is_last:
+            messages.append({
+                "role": "user",
+                "content": (
+                    "Please stop calling tools and give your best answer "
+                    "using the information you have already retrieved."
+                ),
+            })
+
         result = await provider.chat(messages, tools=TOOLS, temperature=temperature)
         finish_reason = result.get("finish_reason")
 
@@ -94,7 +105,7 @@ async def _run_turn(messages: list[dict], provider, temperature: float) -> str:
             return result["content"]
 
         if finish_reason == "tool_calls":
-            messages.append(result["assistant_message"])  # full assistant message with tool_calls
+            messages.append(result["assistant_message"])
             for tool_call in result["tool_calls"]:
                 tool_result = _dispatch_tool(tool_call)
                 messages.append({
@@ -104,11 +115,10 @@ async def _run_turn(messages: list[dict], provider, temperature: float) -> str:
                 })
             continue
 
-        # Unexpected finish_reason — treat as done
         logger.warning("Unexpected finish_reason: %s", finish_reason)
         return result.get("content", "")
 
-    logger.warning("Tool-calling loop hit MAX_TOOL_ITERATIONS")
+    logger.warning("Tool-calling loop exhausted MAX_TOOL_ITERATIONS without stop")
     return "I wasn't able to complete that request."
 
 
