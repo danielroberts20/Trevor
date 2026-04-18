@@ -41,14 +41,3 @@ async def run(sql: str) -> list[dict]:
     db_client.query() enforces SELECT-only; raises ValueError otherwise.
     """
     return db_query(sql)
-
-
-def get_db_schema() -> str:
-    """
-    Return a formatted string of the DB schema for inclusion in the system prompt.
-    Gives the LLM enough context to write valid queries.
-    """
-    rows = get_schema()
-    return "\n\n".join(
-        f"-- {row['name']}\n{row['sql']}" for row in rows if row["sql"]
-    )

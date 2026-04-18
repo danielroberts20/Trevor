@@ -43,27 +43,6 @@ def _check_chroma() -> dict:
         return {"status": "error", "detail": str(e)}
 
 
-def _load_schema() -> str:
-    """
-    Fetch the DB schema once at startup and format it as a SQL string
-    for injection into the system prompt.
-    Returns an empty string if the DB is unreachable — chat will still
-    work, the LLM just won't have schema context for query_db calls.
-    """
-    try:
-        rows = get_schema()
-        schema = "\n\n".join(
-            f"-- {row['name']}\n{row['sql']}"
-            for row in rows
-            if row["sql"]
-        )
-        logger.info(f"Schema loaded: {len(rows)} tables")
-        return schema
-    except Exception as e:
-        logger.warning(f"Schema load failed: {e}")
-        return ""
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Run startup checks and start background tasks."""
@@ -79,7 +58,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"Chroma check: {chroma_status}")
 
     # Load schema once; stored on app.state for the lifetime of the process
-    app.state.db_schema = _load_schema()
+    app.state.db_schema = get_schema()
 
     app.state.startup_checks = {
         "db": db_status,

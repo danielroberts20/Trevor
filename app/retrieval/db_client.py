@@ -14,7 +14,12 @@ as a query API. This also means Trevor can run independently of TravelNet.
 """
 
 import sqlite3
+import sqlparse
+import logging
 from config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 def _get_conn() -> sqlite3.Connection:
@@ -23,30 +28,57 @@ def _get_conn() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     return conn
 
+def _is_select(sql: str) -> bool:
+    parsed = sqlparse.parse(sql.strip())
+    if not parsed:
+        return False
+    statement = parsed[0]
+    return statement.get_type() == "SELECT"
 
-def query(sql: str, params: tuple = ()) -> list[dict]:
-    """
-    Execute a SELECT query and return results as a list of dicts.
-    Raises ValueError if the statement is not a SELECT.
-    """
-    normalised = sql.strip().upper()
-    if not normalised.startswith("SELECT"):
+
+def query(sql: str, params: tuple = (), row_limit: int = 100) -> dict:
+    if not _is_select(sql):
         raise ValueError(f"Only SELECT queries are permitted. Got: {sql[:80]!r}")
-
     conn = _get_conn()
     try:
         cursor = conn.execute(sql, params)
-        rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchmany(row_limit + 1)
+        truncated = len(rows) > row_limit
+        rows = rows[:row_limit]
+        return {
+            "columns": columns,
+            "rows": [list(row) for row in rows],
+            "row_count": len(rows),
+            "truncated": truncated,
+        }
+    except Exception as e:
+        return {
+            "columns": [],
+            "rows": [],
+            "row_count": 0,
+            "truncated": False,
+            "error": str(e),
+        }
     finally:
         conn.close()
 
+def get_schema() -> str:
+    try:
+        result = query(
+            "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;"
+        )
+        columns = result["columns"]  # ["name", "sql"]
+        name_idx = columns.index("name")
+        sql_idx = columns.index("sql")
 
-def get_schema() -> list[dict]:
-    """
-    Return the DB schema (table names + CREATE statements).
-    Used to build the system prompt so the LLM knows what tables exist.
-    """
-    return query(
-        "SELECT name, sql FROM sqlite_master WHERE type='table' ORDER BY name;"
-    )
+        schema = "\n\n".join(
+            f"-- {row[name_idx]}\n{row[sql_idx]}"
+            for row in result["rows"]
+            if row[sql_idx]
+        )
+        logger.info(f"Schema loaded: {len(result['rows'])} tables")
+        return schema
+    except Exception as e:
+        logger.warning(f"Schema load failed: {e}")
+        return ""
