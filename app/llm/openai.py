@@ -14,6 +14,7 @@ Prompt caching: OpenAI automatically caches repeated prompt prefixes
 (system prompt + schema) at $0.02/1M tokens. No extra work needed.
 """
 
+import json
 import openai as openai_lib
 from llm.base import BaseLLMProvider
 from config import settings
@@ -51,13 +52,14 @@ class OpenAIProvider(BaseLLMProvider):
                 tool_calls.append({
                     "id": tc.id,
                     "name": tc.function.name,
-                    "arguments": tc.function.arguments,  # JSON string
+                    "arguments": json.loads(tc.function.arguments),
                 })
 
         return {
             "content": message.content or "",
             "tool_calls": tool_calls,
             "finish_reason": choice.finish_reason,
+            "assistant_message": message.model_dump(),
         }
 
     async def embed(self, text: str) -> list[float]:

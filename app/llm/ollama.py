@@ -52,7 +52,7 @@ class OllamaProvider(BaseLLMProvider):
                 json={"messages": messages, "model": settings.ollama_model},
             )
             r.raise_for_status()
-            return {"content": r.json()["response"], "tool_calls": []}
+            return {"content": r.json()["response"], "finish_reason": "stop", "tool_calls": []}
 
     async def embed(self, text: str) -> list[float]:
         self._ensure_pc_online()
