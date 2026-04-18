@@ -21,7 +21,7 @@ from llm.provider import get_provider
 from fastapi import APIRouter, HTTPException, Header, Request #type: ignore
 from pydantic import BaseModel #type: ignore
 from datetime import date
-
+import json
 from config import settings
 from compute.manager import record_chat
 from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
@@ -83,6 +83,48 @@ def _build_messages(request: ChatRequest, db_schema: str) -> list[dict]:
     messages.append({"role": "user", "content": request.message})
     return messages
 
+MAX_TOOL_ITERATIONS = 5
+
+async def _run_turn(messages: list[dict], provider, temperature: float) -> str:
+    for _ in range(MAX_TOOL_ITERATIONS):
+        result = await provider.chat(messages, tools=TOOLS, temperature=temperature)
+        finish_reason = result.get("finish_reason")
+
+        if finish_reason == "stop":
+            return result["content"]
+
+        if finish_reason == "tool_calls":
+            messages.append(result["assistant_message"])  # full assistant message with tool_calls
+            for tool_call in result["tool_calls"]:
+                tool_result = _dispatch_tool(tool_call)
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call["id"],
+                    "content": json.dumps(tool_result),
+                })
+            continue
+
+        # Unexpected finish_reason — treat as done
+        logger.warning("Unexpected finish_reason: %s", finish_reason)
+        return result.get("content", "")
+
+    logger.warning("Tool-calling loop hit MAX_TOOL_ITERATIONS")
+    return "I wasn't able to complete that request."
+
+
+def _dispatch_tool(tool_call: dict) -> dict:
+    name = tool_call["name"]
+    args = tool_call["arguments"]  # already parsed from JSON by provider
+
+    if name == "query_db":
+        from retrieval.db_client import query
+        return query(**args)
+    if name == "search_journal":
+        from tools.search_journal import search
+        return search(**args)
+
+    return {"error": f"Unknown tool: {name}"}
+
 @router.post("", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
@@ -96,9 +138,8 @@ async def chat(
         db_schema = getattr(raw_request.app.state, "db_schema", "")
         messages = _build_messages(request, db_schema)
         provider = get_provider()
-        result = await provider.chat(messages, tools=TOOLS, temperature=request.reasoning_freedom / 10)
-        logger.info("LLM raw response: %s", result)
-        response_text = result["content"]
+        response_text = await _run_turn(messages, provider, temperature=request.reasoning_freedom / 10)
+        logger.info("LLM response: %s", response_text)
  
         record_chat()
  
