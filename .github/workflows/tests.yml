@@ -16,6 +16,9 @@ jobs:
       - name: Create .env from example
         run: cp .env.example .env
 
+      - name: Create prompt.py from example
+        run: cp app/prompt.example.py app/prompt.py
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
