@@ -29,11 +29,11 @@ def _get_conn() -> sqlite3.Connection:
     return conn
 
 def _is_select(sql: str) -> bool:
-    parsed = sqlparse.parse(sql.strip())
-    if not parsed:
+    # Filter out empty tokens (trailing semicolons produce a None-type statement)
+    parsed = [s for s in sqlparse.parse(sql.strip()) if s.get_type() is not None]
+    if len(parsed) != 1:
         return False
-    statement = parsed[0]
-    return statement.get_type() == "SELECT"
+    return parsed[0].get_type() == "SELECT"
 
 
 def query(sql: str, params: tuple = (), row_limit: int = 100) -> dict:
@@ -75,7 +75,7 @@ def get_schema() -> str:
         schema = "\n\n".join(
             f"-- {row[name_idx]}\n{row[sql_idx]}"
             for row in result["rows"]
-            if row[sql_idx]
+            if row[sql_idx] and not row[name_idx].startswith("sqlite_")
         )
         logger.info(f"Schema loaded: {len(result['rows'])} tables")
         return schema
