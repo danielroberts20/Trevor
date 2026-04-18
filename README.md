@@ -2,7 +2,10 @@
 
 > A RAG-based conversational AI for querying three years of personal travel data: GPS tracks, health metrics, spending logs, and daily journal entries across ~9 countries.
 
+[![CI](https://github.com/danielroberts20/Trevor/actions/workflows/ci.yml/badge.svg)](https://github.com/danielroberts20/Trevor/actions/workflows/ci.yml)
+
 **[Live Demo (coming soon)](#)** · **[TravelNet Repository](https://github.com/danielroberts20/TravelNet)** · **[TravelNet Demo Site](https://travelnet.dev)**
+
 
 ---
 
