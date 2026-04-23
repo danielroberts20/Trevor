@@ -27,6 +27,7 @@ from compute.manager import record_chat
 from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
 from tools.query_db import TOOL_DEFINITION as QUERY_DB_TOOL
 from prompt import SYSTEM_PROMPT_BASE, SCHEMA_BLOCK_TEMPLATE
+from api.prompt_handling import parse_travel_yml
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,10 @@ def _build_system_prompt(db_schema: str) -> str:
         schema_block = SCHEMA_BLOCK_TEMPLATE.format(schema=db_schema)
     else:
         schema_block = "(Database schema unavailable — structured queries are disabled.)"
+    
+    travel_yml = parse_travel_yml()
 
-    return SYSTEM_PROMPT_BASE.format(date_line=date_line, schema_block=schema_block)
+    return SYSTEM_PROMPT_BASE.format(date_line=date_line, schema_block=schema_block, travel_yml=travel_yml)
 
 
 class Message(BaseModel):

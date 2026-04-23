@@ -5,6 +5,7 @@ Other modules import `settings` from this file rather than reading os.environ di
 
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from pathlib import Path
 
 
 class Settings(BaseSettings):
@@ -46,6 +47,8 @@ class Settings(BaseSettings):
 
     # API security
     trevor_api_key: str = Field(alias="TREVOR_API_KEY")
+
+    travel_yml_path: Path = Field(alias="TRAVEL_YML_PATH")
 
     class Config:
         env_file = ".env"
