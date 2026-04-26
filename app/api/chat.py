@@ -26,6 +26,7 @@ from config import settings
 from compute.manager import record_chat
 from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
 from tools.query_db import TOOL_DEFINITION as QUERY_DB_TOOL
+from tools.create_figure import TOOL_DEFINITION as CREATE_FIGURE_TOOL
 from prompt import SYSTEM_PROMPT_BASE, SCHEMA_BLOCK_TEMPLATE
 from api.prompt_handling import parse_travel_yml
 
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-TOOLS = [SEARCH_JOURNAL_TOOL, QUERY_DB_TOOL]
+TOOLS = [SEARCH_JOURNAL_TOOL, QUERY_DB_TOOL, CREATE_FIGURE_TOOL]
 
 
 def _build_system_prompt(db_schema: str) -> str:
@@ -102,6 +103,7 @@ async def _run_turn(messages: list[dict], provider, temperature: float) -> str:
             })
 
         result = await provider.chat(messages, tools=TOOLS, temperature=temperature)
+        logger.info(result)
         finish_reason = result.get("finish_reason")
 
         if finish_reason == "stop":
@@ -130,11 +132,14 @@ def _dispatch_tool(tool_call: dict) -> dict:
     args = tool_call["arguments"]  # already parsed from JSON by provider
 
     if name == "query_db":
-        from retrieval.db_client import query
-        return query(**args)
+        from tools import query_db
+        return query_db.run(**args)
     if name == "search_journal":
-        from tools.search_journal import search
-        return search(**args)
+        from tools import search_journal
+        return search_journal.run(**args)
+    if name == "create_figure":
+        from tools import create_figure
+        return create_figure.run(**args)
 
     return {"error": f"Unknown tool: {name}"}
 

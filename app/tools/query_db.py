@@ -35,7 +35,7 @@ TOOL_DEFINITION = {
 }
 
 
-async def run(sql: str) -> list[dict]:
+def run(sql: str) -> list[dict]:
     """
     Execute the query_db tool.
     db_client.query() enforces SELECT-only; raises ValueError otherwise.

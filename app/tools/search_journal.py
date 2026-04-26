@@ -37,7 +37,7 @@ TOOL_DEFINITION = {
 }
 
 
-async def run(query: str, n_results: int = 5) -> list[dict]:
+def run(query: str, n_results: int = 5) -> list[dict]:
     """
     Execute the journal search tool.
     Returns a list of relevant journal chunks with metadata.
