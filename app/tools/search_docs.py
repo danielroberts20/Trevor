@@ -1,11 +1,11 @@
 """
-Tool: search_chrome_docs
+Tool: search_docs
 
 Given a natural language query, embeds it and retrieves the most semantically
-similar Chrome extension documentation entries from the Chrome docs vector store.
+similar documentation entries from the docs Chroma vector store.
 
-The store is populated from doc page entries scraped from the Chrome Web Store /
-developer docs. Each entry corresponds to a section or page of documentation.
+The store is populated from doc page entries scraped and indexed at build time.
+Each entry corresponds to a section or page of documentation.
 """
 
 # Tool definition in OpenAI function-calling format.
@@ -13,12 +13,11 @@ developer docs. Each entry corresponds to a section or page of documentation.
 TOOL_DEFINITION = {
     "type": "function",
     "function": {
-        "name": "search_chrome_docs",
+        "name": "search_docs",
         "description": (
-            "Search the Chrome extension developer documentation for content semantically "
-            "related to a query. Use for questions about Chrome extension APIs, manifest "
-            "fields, permissions, event lifecycle, or any Chrome Web Store / developer "
-            "docs topic."
+            "Search indexed documentation entries for content semantically related to a query. "
+            "Use for questions about APIs, configuration, concepts, or any topic covered "
+            "in the documentation pages stored in the Chroma vector store."
         ),
         "parameters": {
             "type": "object",
@@ -41,11 +40,11 @@ TOOL_DEFINITION = {
 
 def run(query: str, n_results: int = 5) -> list[dict]:
     """
-    Execute the Chrome docs search tool.
+    Execute the docs search tool.
     Returns a list of relevant documentation chunks with metadata.
     """
-    # TODO: wire up once the Chrome docs vector store is built
+    # TODO: wire up once the docs Chroma store is built
     # from retrieval.chroma_client import search_collection
     # embedding = embed(query)
-    # return search_collection("chrome_docs", embedding, n_results=n_results)
+    # return search_collection("docs", embedding, n_results=n_results)
     raise NotImplementedError
