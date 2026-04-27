@@ -38,13 +38,14 @@ TOOL_DEFINITION = {
 }
 
 
-def run(query: str, n_results: int = 5) -> list[dict]:
+async def run(query: str, n_results: int = 5) -> list[dict]:
     """
     Execute the docs search tool.
     Returns a list of relevant documentation chunks with metadata.
     """
-    # TODO: wire up once the docs Chroma store is built
-    # from retrieval.chroma_client import search_collection
-    # embedding = embed(query)
-    # return search_collection("docs", embedding, n_results=n_results)
+    from llm.provider import get_provider
+    from retrieval.chroma_client import search, Collection
+    provider = get_provider()
+    embedding = await provider.embed(query)
     raise NotImplementedError
+    return search(Collection.DOCS, embedding, n_results=n_results)

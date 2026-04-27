@@ -37,15 +37,15 @@ TOOL_DEFINITION = {
 }
 
 
-def run(query: str, n_results: int = 5) -> list[dict]:
+async def run(query: str, n_results: int = 5) -> list[dict]:
     """
     Execute the journal search tool.
     Returns a list of relevant journal chunks with metadata.
     """
-    # TODO: wire up
-    # from llm.provider import get_provider
-    # from retrieval.chroma_client import search
-    # provider = get_provider()
-    # embedding = await provider.embed(query)
-    # return search(embedding, n_results=n_results)
+    from llm.provider import get_provider
+    from retrieval.chroma_client import search, Collection
+    provider = get_provider()
+    embedding = await provider.embed(query)
     raise NotImplementedError
+    return search(Collection.JOURNAL, embedding, n_results=n_results)
+    

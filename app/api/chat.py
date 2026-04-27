@@ -27,6 +27,7 @@ from compute.manager import record_chat
 from tools.search_journal import TOOL_DEFINITION as SEARCH_JOURNAL_TOOL
 from tools.query_db import TOOL_DEFINITION as QUERY_DB_TOOL
 from tools.create_figure import TOOL_DEFINITION as CREATE_FIGURE_TOOL
+from tools.search_docs import TOOL_DEFINITION as SEARCH_DOCS_TOOL
 from prompt import SYSTEM_PROMPT_BASE, SCHEMA_BLOCK_TEMPLATE
 from api.prompt_handling import parse_travel_yml
 
@@ -35,7 +36,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-TOOLS = [SEARCH_JOURNAL_TOOL, QUERY_DB_TOOL, CREATE_FIGURE_TOOL]
+TOOLS = [SEARCH_JOURNAL_TOOL, QUERY_DB_TOOL, CREATE_FIGURE_TOOL, SEARCH_DOCS_TOOL]
 
 
 def _build_system_prompt(db_schema: str) -> str:
@@ -77,7 +78,6 @@ def _build_messages(request: ChatRequest, db_schema: str) -> list[dict]:
     Assemble the full message list in OpenAI format:
       [system, ...history, current user message]
  
-    TODO: once tool-calling is wired up, inject tool definitions here.
     TODO: map reasoning_freedom to temperature and extend system prompt accordingly.
     """
     system_prompt = _build_system_prompt(db_schema)
@@ -140,6 +140,9 @@ def _dispatch_tool(tool_call: dict) -> dict:
     if name == "create_figure":
         from tools import create_figure
         return create_figure.run(**args)
+    if name == "search_docs":
+        from tools import search_docs
+        return search_docs.run(**args)
 
     return {"error": f"Unknown tool: {name}"}
 
