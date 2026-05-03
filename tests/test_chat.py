@@ -465,7 +465,7 @@ class TestDispatchTool:
             "name": "query_db",
             "arguments": {"sql": "SELECT 1"},
         }
-        with patch("retrieval.db_client.query", return_value={"columns": [], "rows": []}) as mock_q:
+        with patch("tools.query_db.run", return_value={"columns": [], "rows": []}) as mock_q:
             _dispatch_tool(tool_call)
         mock_q.assert_called_once_with(sql="SELECT 1")
 
@@ -477,7 +477,7 @@ class TestDispatchTool:
         }
         # tools.search_journal.search does not yet exist; create=True adds it for
         # the duration of this test so the routing can be verified.
-        with patch("tools.search_journal.search", create=True, return_value=[]) as mock_s:
+        with patch("tools.search_journal.run", create=True, return_value=[]) as mock_s:
             _dispatch_tool(tool_call)
         mock_s.assert_called_once_with(query="Melbourne", n_results=3)
 
@@ -499,6 +499,6 @@ class TestDispatchTool:
             "name": "query_db",
             "arguments": {"sql": "SELECT 2", "row_limit": 50},
         }
-        with patch("retrieval.db_client.query", return_value={}) as mock_q:
+        with patch("tools.query_db.run", return_value={}) as mock_q:
             _dispatch_tool(tool_call)
         mock_q.assert_called_once_with(sql="SELECT 2", row_limit=50)

@@ -35,9 +35,9 @@ TOOL_DEFINITION = {
 }
 
 
-def run(sql: str) -> list[dict]:
+def run(sql: str, row_limit: int = 100) -> list[dict]:
     """
     Execute the query_db tool.
     db_client.query() enforces SELECT-only; raises ValueError otherwise.
     """
-    return db_query(sql)
+    return db_query(sql, row_limit)
