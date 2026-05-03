@@ -10,6 +10,20 @@ are suppressed inside the client fixture by patching before TestClient enters
 the app's lifespan context.
 """
 
+import sys
+import os
+
+# Add Trevor's app to path first — prevents 'from main import app' 
+# resolving to TravelNet's main.py when running from services root
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "app"))
+
+# Load Trevor's test env before Settings() is instantiated at import time
+_env_test = os.path.join(os.path.dirname(__file__), "..", ".env.test")
+os.environ.setdefault("LLM_PROVIDER", "openai")
+# Load all vars from .env.test into os.environ before any imports
+from dotenv import load_dotenv
+load_dotenv(_env_test, override=False)
+
 import sqlite3
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
