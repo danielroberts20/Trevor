@@ -15,6 +15,7 @@ from compute.manager import start_background_tasks
 from retrieval.db_client import get_schema
 from config import settings
 from logging_config import configure_logging
+from api.ingest import router as ingest_router
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router, prefix="/chat", tags=["chat"])
-
+app.include_router(ingest_router, prefix="/ingest")
 
 @app.get("/health")
 async def health():
