@@ -38,14 +38,17 @@ TOOL_DEFINITION = {
 
 
 async def run(query: str, n_results: int = 5) -> list[dict]:
-    """
-    Execute the journal search tool.
-    Returns a list of relevant journal chunks with metadata.
-    """
     from llm.provider import get_provider
-    from retrieval.chroma_client import search, Collection
+    from retrieval.chroma_client import search, Collection, get_collection
+
+    # Return early if collection is empty — avoids Chroma error when
+    # n_results exceeds document count
+    collection = get_collection(Collection.JOURNAL)
+    count = collection.count()
+    if count == 0:
+        return [{"text": "No journal entries have been ingested yet.", "metadata": {}}]
+
     provider = get_provider()
     embedding = await provider.embed(query)
-    raise NotImplementedError
-    return search(Collection.JOURNAL, embedding, n_results=n_results)
+    return search(Collection.JOURNAL, embedding, n_results=min(n_results, count))
     
