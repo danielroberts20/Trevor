@@ -39,13 +39,14 @@ TOOL_DEFINITION = {
 
 
 async def run(query: str, n_results: int = 5) -> list[dict]:
-    """
-    Execute the docs search tool.
-    Returns a list of relevant documentation chunks with metadata.
-    """
     from llm.provider import get_provider
-    from retrieval.chroma_client import search, Collection
+    from retrieval.chroma_client import search, Collection, get_collection
+
+    collection = get_collection(Collection.DOCS)
+    count = collection.count()
+    if count == 0:
+        return [{"text": "No documentation pages have been indexed yet.", "metadata": {}}]
+
     provider = get_provider()
     embedding = await provider.embed(query)
-    raise NotImplementedError
-    return search(Collection.DOCS, embedding, n_results=n_results)
+    return search(Collection.DOCS, embedding, n_results=min(n_results, count))

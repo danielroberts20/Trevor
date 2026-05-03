@@ -21,8 +21,6 @@ from enum import Enum
 import chromadb #type: ignore
 from config import settings
 
-COLLECTION_NAME = "journal_entries"
-
 class Collection(Enum):
     JOURNAL = "journal_entries"
     DOCS = "doc_pages"
@@ -32,10 +30,10 @@ def get_client() -> chromadb.PersistentClient:
     return chromadb.PersistentClient(path=settings.chroma_path)
 
 
-def get_collection(name: Collection, client: chromadb.PersistentClient | None = None):
+def get_collection(name: Collection, client=None):
     c = client or get_client()
     return c.get_or_create_collection(
-        name=name,
+        name=name.value,
         metadata={"hnsw:space": "cosine"},
     )
 
