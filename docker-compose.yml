@@ -5,8 +5,8 @@ services:
     env_file: .env
     volumes:
       - ./app:/app                                           # bind-mount for dev (hot reload)
-      - /mnt/linux/docker/services/travelnet/data:/data:ro  # shared read-only access to travel.db
-      - /mnt/linux/docker/services/Trevor/chroma:/chroma                         # persistent vector store
+      - /mnt/ssd/docker/services/travelnet/data:/data:ro
+      - /mnt/ssd/docker/services/Trevor/chroma:/chroma
       - /home/dan/services/TravelNet/travel.yml:/config/travel.yml:ro # SSOT for travel. Injected in to prompt.
     ports:
       - "8300:8300"
