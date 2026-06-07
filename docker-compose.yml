@@ -2,6 +2,7 @@ services:
   trevor:
     build: .
     container_name: trevor
+    mem_limit: 512m
     env_file: .env
     volumes:
       - ./app:/app                                           # bind-mount for dev (hot reload)
